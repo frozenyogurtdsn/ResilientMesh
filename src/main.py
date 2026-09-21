@@ -55,3 +55,4 @@ print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
 A.send_packet(packet, B)
+B.send_packet(packet, C)
