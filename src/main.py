@@ -88,15 +88,12 @@ class node:
         for neighbor in self.neighbors:
             if neighbor != sender:
                 self.send_packet(packet, neighbor)
-
 class Network:
-    
     def __init__(self):
         self.nodes = {}
         self.transmission_count = 0
         self.delivered_packets = 0
         self.duplicate_packets = 0
-        self.dropped_packets = 0
         self.dropped_packets = 0
         self.generated_packets = 0
 
@@ -113,21 +110,33 @@ class Network:
 
         if node_a not in node_b.neighbors:
             node_b.neighbors.append(node_a)
+
     def record_transmission(self):
         self.transmission_count += 1
-        
+
     def record_delivery(self):
-         self.delivered_packets += 1
+        self.delivered_packets += 1
 
     def record_duplicate(self):
-         self.duplicate_packets += 1
+        self.duplicate_packets += 1
 
     def record_drop(self):
-         self.dropped_packets += 1
+        self.dropped_packets += 1
 
-    def record_generation(self):
-         self.generated_packets += 1
+    def generate_packet(self, packet_id, source, destination, data, ttl):
+        packet = Packet(
+            packet_id,
+            source,
+            destination,
+            data,
+            ttl
+        )
 
+        self.generated_packets += 1
+
+        return packet
+
+   
 
 network = Network()
 
@@ -143,8 +152,13 @@ network.connect("A", "B")
 network.connect("A", "C")
 network.connect("B", "C")
 
-packet = Packet("P1", "A", "C", "Hello from A", 5)
-
+packet = network.generate_packet(
+    "P1",
+    "A",
+    "C",
+    "Hello from A",
+    5
+)
 
 
 print("Packet:", packet.source, "->", packet.destination)
@@ -155,7 +169,7 @@ print("A neighbors:", [node.node_id for node in A.neighbors])
 print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
-network.record_generation()
+
 A.receive_packet(packet, None)
 print("Total transmissions:", network.transmission_count)
 print("Delivered packets:", network.delivered_packets)
