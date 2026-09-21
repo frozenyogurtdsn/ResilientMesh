@@ -16,13 +16,21 @@ class node:
         self.seen_packets = set()
 
     def send_packet(self, packet, next_node):
+        if packet.ttl <= 0:
+            print(
+                f"{self.node_id}: Packet expired."
+            )
+            return
+
+        packet.ttl -= 1
+
         print(
             f"{self.node_id} -> {next_node.node_id}: "
-            f"Packet from {packet.source} to {packet.destination}"
+            f"Packet from {packet.source} to {packet.destination} "
+            f"(TTL: {packet.ttl})"
         )
 
         next_node.receive_packet(packet)
-
     def receive_packet(self, packet):
         print(
             f"{self.node_id} received packet "
