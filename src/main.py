@@ -136,8 +136,21 @@ class Network:
 
         return packet
 
-   
+    def run_simulation(self, packets):
+        for packet in packets:
+            source_node = self.nodes[packet.source]
+            source_node.receive_packet(packet, None)
 
+    def reset_metrics(self):
+     self.transmission_count = 0
+     self.delivered_packets = 0
+     self.duplicate_packets = 0
+     self.dropped_packets = 0
+     self.generated_packets = 0
+
+     for node in self.nodes.values():
+        node.seen_packets.clear()
+        node.storage.clear()
 network = Network()
 
 A = node("A")
@@ -152,13 +165,19 @@ network.connect("A", "B")
 network.connect("A", "C")
 network.connect("B", "C")
 
-packet = network.generate_packet(
-    "P1",
-    "A",
-    "C",
-    "Hello from A",
-    5
-)
+packets = []
+
+for i in range(10):
+    packet = network.generate_packet(
+        f"P{i + 1}",
+        "A",
+        "C",
+        "Hello from A",
+        5
+    )
+
+    packets.append(packet)
+
 
 
 print("Packet:", packet.source, "->", packet.destination)
@@ -170,7 +189,7 @@ print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
-A.receive_packet(packet, None)
+network.run_simulation(packets)
 print("Total transmissions:", network.transmission_count)
 print("Delivered packets:", network.delivered_packets)
 print("Duplicate packets:", network.duplicate_packets)
@@ -184,3 +203,13 @@ if network.generated_packets > 0:
     )
 
     print("Delivery rate:", delivery_rate)
+
+    print("\n--- Resetting network ---")
+
+network.reset_metrics()
+
+print("Total transmissions:", network.transmission_count)
+print("Delivered packets:", network.delivered_packets)
+print("Duplicate packets:", network.duplicate_packets)
+print("Dropped packets:", network.dropped_packets)
+print("Generated packets:", network.generated_packets)
