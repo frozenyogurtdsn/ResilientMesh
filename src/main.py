@@ -15,6 +15,23 @@ class node:
         self.storage = []
         self.seen_packets = set()
 
+    def send_packet(self, packet, next_node):
+        print(
+            f"{self.node_id} -> {next_node.node_id}: "
+            f"Packet from {packet.source} to {packet.destination}"
+        )
+
+        next_node.receive_packet(packet)
+
+    def receive_packet(self, packet):
+        print(
+            f"{self.node_id} received packet "
+            f"from {packet.source}"
+        )
+
+        self.storage.append(packet)
+
+
 A = node("A")
 B = node("B")
 C = node("C")
@@ -25,6 +42,8 @@ C.neighbors = [B]
 
 packet = Packet("A", "C", "Hello from A", 5)
 
+
+
 print("Packet:", packet.source, "->", packet.destination)
 print("Data:", packet.data)
 print("TTL:", packet.ttl)
@@ -33,3 +52,6 @@ print("A neighbors:", [node.node_id for node in A.neighbors])
 print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
+
+
+A.send_packet(packet, B)
