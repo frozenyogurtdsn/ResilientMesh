@@ -49,6 +49,7 @@ class node:
             )
 
         if packet.packet_id in self.seen_packets:
+            self.network.record_duplicate()
             print(
                 f"{self.node_id}: Duplicate packet "
                 f"{packet.packet_id}. Dropping packet."
@@ -58,11 +59,14 @@ class node:
         self.seen_packets.add(packet.packet_id)
 
         if self.node_id == packet.destination:
+            self.network.record_delivery()
             print(
                 f"{self.node_id} is the destination. "
                 f"Packet delivered."
             )
             return
+
+            print("Dropped packets:", network.dropped_packets)
 
         if packet.ttl <= 0:
             print(
@@ -82,6 +86,9 @@ class Network:
     def __init__(self):
         self.nodes = {}
         self.transmission_count = 0
+        self.delivered_packets = 0
+        self.duplicate_packets = 0
+        self.dropped_packets = 0
 
     def add_node(self, node):
         self.nodes[node.node_id] = node
@@ -98,7 +105,15 @@ class Network:
             node_b.neighbors.append(node_a)
     def record_transmission(self):
         self.transmission_count += 1
+        
+    def record_delivery(self):
+         self.delivered_packets += 1
 
+    def record_duplicate(self):
+         self.duplicate_packets += 1
+
+    def record_drop(self):
+         self.dropped_packets += 1
 network = Network()
 
 A = node("A")
@@ -128,3 +143,6 @@ print("C neighbors:", [node.node_id for node in C.neighbors])
 
 A.receive_packet(packet, None)
 print("Total transmissions:", network.transmission_count)
+print("Delivered packets:", network.delivered_packets)
+print("Duplicate packets:", network.duplicate_packets)
+print("Dropped packets:", network.dropped_packets)
