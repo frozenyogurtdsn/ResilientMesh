@@ -29,8 +29,14 @@ class node:
             f"from {packet.source}"
         )
 
-        self.storage.append(packet)
+        if self.node_id == packet.destination:
+            print(
+                f"{self.node_id} is the destination. "
+                f"Packet delivered."
+            )
+            return
 
+        self.storage.append(packet)
 
 A = node("A")
 B = node("B")
