@@ -31,14 +31,20 @@ class node:
             f"(TTL: {packet.ttl})"
         )
 
-        next_node.receive_packet(packet)
+        next_node.receive_packet(packet, self)
 
 
-    def receive_packet(self, packet):
-        print(
-            f"{self.node_id} received packet "
-            f"from {packet.source}"
-        )
+    def receive_packet(self, packet, sender):
+        if sender is None:
+            print(
+                f"{self.node_id} created packet "
+                f"{packet.packet_id}"
+            )
+        else:
+            print(
+                f"{self.node_id} received packet "
+                f"{packet.packet_id} from {sender.node_id}"
+            )
 
         if packet.packet_id in self.seen_packets:
             print(
@@ -65,24 +71,17 @@ class node:
         self.storage.append(packet)
 
         for neighbor in self.neighbors:
-            if neighbor.node_id == packet.destination:
-                print(
-                    f"{self.node_id} found destination "
-                    f"{neighbor.node_id} as a neighbor."
-                )
+            if neighbor != sender:
                 self.send_packet(packet, neighbor)
-                return
-
-
 
 
 A = node("A")
 B = node("B")
 C = node("C")
 
-A.neighbors = [B]
+A.neighbors = [B, C]
 B.neighbors = [A, C]
-C.neighbors = [B]
+C.neighbors = [A, B]
 
 packet = Packet("P1", "A", "C", "Hello from A", 5)
 
@@ -97,4 +96,4 @@ print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
-A.send_packet(packet, B)
+A.receive_packet(packet, None)
