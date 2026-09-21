@@ -38,6 +38,15 @@ class node:
 
         self.storage.append(packet)
 
+        for neighbor in self.neighbors:
+            if neighbor.node_id == packet.destination:
+                print(
+                    f"{self.node_id} found destination "
+                    f"{neighbor.node_id} as a neighbor."
+                )
+                self.send_packet(packet, neighbor)
+                return
+
 A = node("A")
 B = node("B")
 C = node("C")
@@ -59,6 +68,4 @@ print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
-
 A.send_packet(packet, B)
-B.send_packet(packet, C)
