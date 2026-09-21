@@ -92,6 +92,8 @@ class Network:
         self.delivered_packets = 0
         self.duplicate_packets = 0
         self.dropped_packets = 0
+        self.dropped_packets = 0
+        self.generated_packets = 0
 
     def add_node(self, node):
         self.nodes[node.node_id] = node
@@ -117,6 +119,11 @@ class Network:
 
     def record_drop(self):
          self.dropped_packets += 1
+
+    def record_generation(self):
+         self.generated_packets += 1
+
+
 network = Network()
 
 A = node("A")
@@ -143,9 +150,10 @@ print("A neighbors:", [node.node_id for node in A.neighbors])
 print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
-
+network.record_generation()
 A.receive_packet(packet, None)
 print("Total transmissions:", network.transmission_count)
 print("Delivered packets:", network.delivered_packets)
 print("Duplicate packets:", network.duplicate_packets)
 print("Dropped packets:", network.dropped_packets)
+print("Generated packets:", network.generated_packets)
