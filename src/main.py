@@ -1,5 +1,6 @@
-class Packet: 
-    def __init__(self, source, destination, data, ttl):
+class Packet:
+    def __init__(self, packet_id, source, destination, data, ttl):
+        self.packet_id = packet_id
         self.source = source
         self.destination = destination
         self.data = data
@@ -31,11 +32,22 @@ class node:
         )
 
         next_node.receive_packet(packet)
+
+
     def receive_packet(self, packet):
         print(
             f"{self.node_id} received packet "
             f"from {packet.source}"
         )
+
+        if packet.packet_id in self.seen_packets:
+            print(
+                f"{self.node_id}: Duplicate packet "
+                f"{packet.packet_id}. Dropping packet."
+            )
+            return
+
+        self.seen_packets.add(packet.packet_id)
 
         if self.node_id == packet.destination:
             print(
@@ -61,6 +73,9 @@ class node:
                 self.send_packet(packet, neighbor)
                 return
 
+
+
+
 A = node("A")
 B = node("B")
 C = node("C")
@@ -69,7 +84,7 @@ A.neighbors = [B]
 B.neighbors = [A, C]
 C.neighbors = [B]
 
-packet = Packet("A", "C", "Hello from A", 5)
+packet = Packet("P1", "A", "C", "Hello from A", 5)
 
 
 
