@@ -19,24 +19,29 @@ class node:
 
     def send_packet(self, packet, next_node):
         if packet.ttl <= 0:
-            
-
             print(
                 f"{self.node_id}: Packet expired."
             )
             return
 
-        packet.ttl -= 1
+        forwarded_packet = Packet(
+            packet.packet_id,
+            packet.source,
+            packet.destination,
+            packet.data,
+            packet.ttl - 1
+        )
 
         self.network.record_transmission()
 
         print(
             f"{self.node_id} -> {next_node.node_id}: "
-            f"Packet from {packet.source} to {packet.destination} "
-            f"(TTL: {packet.ttl})"
+            f"Packet from {forwarded_packet.source} "
+            f"to {forwarded_packet.destination} "
+            f"(TTL: {forwarded_packet.ttl})"
         )
 
-        next_node.receive_packet(packet, self)
+        next_node.receive_packet(forwarded_packet, self)
 
     def receive_packet(self, packet, sender):
         if sender is None:
@@ -157,3 +162,11 @@ print("Delivered packets:", network.delivered_packets)
 print("Duplicate packets:", network.duplicate_packets)
 print("Dropped packets:", network.dropped_packets)
 print("Generated packets:", network.generated_packets)
+
+if network.generated_packets > 0:
+    delivery_rate = (
+        network.delivered_packets
+        / network.generated_packets
+    )
+
+    print("Delivery rate:", delivery_rate)
