@@ -75,13 +75,36 @@ class node:
                 self.send_packet(packet, neighbor)
 
 
+class Network:
+    def __init__(self):
+        self.nodes = {}
+
+    def add_node(self, node):
+        self.nodes[node.node_id] = node
+
+    def connect(self, node_a_id, node_b_id):
+        node_a = self.nodes[node_a_id]
+        node_b = self.nodes[node_b_id]
+
+        if node_b not in node_a.neighbors:
+            node_a.neighbors.append(node_b)
+
+        if node_a not in node_b.neighbors:
+            node_b.neighbors.append(node_a)
+
+network = Network()
+
 A = node("A")
 B = node("B")
 C = node("C")
 
-A.neighbors = [B, C]
-B.neighbors = [A, C]
-C.neighbors = [A, B]
+network.add_node(A)
+network.add_node(B)
+network.add_node(C)
+
+network.connect("A", "B")
+network.connect("A", "C")
+network.connect("B", "C")
 
 packet = Packet("P1", "A", "C", "Hello from A", 5)
 
