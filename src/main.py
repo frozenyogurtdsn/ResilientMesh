@@ -44,6 +44,12 @@ class node:
             )
             return
 
+        if packet.ttl <= 0:
+            print(
+                f"{self.node_id}: Packet expired. Dropping packet."
+            )
+            return
+
         self.storage.append(packet)
 
         for neighbor in self.neighbors:
