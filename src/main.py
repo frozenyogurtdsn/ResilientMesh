@@ -15,6 +15,7 @@ class node:
         self.neighbors = []
         self.storage = []
         self.seen_packets = set()
+        self.network = None
 
     def send_packet(self, packet, next_node):
         if packet.ttl <= 0:
@@ -24,6 +25,7 @@ class node:
             return
 
         packet.ttl -= 1
+        self.network.record_transmission()
 
         print(
             f"{self.node_id} -> {next_node.node_id}: "
@@ -76,11 +78,14 @@ class node:
 
 
 class Network:
+    
     def __init__(self):
         self.nodes = {}
+        self.transmission_count = 0
 
     def add_node(self, node):
         self.nodes[node.node_id] = node
+        node.network = self
 
     def connect(self, node_a_id, node_b_id):
         node_a = self.nodes[node_a_id]
@@ -91,6 +96,8 @@ class Network:
 
         if node_a not in node_b.neighbors:
             node_b.neighbors.append(node_a)
+    def record_transmission(self):
+        self.transmission_count += 1
 
 network = Network()
 
@@ -120,3 +127,4 @@ print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
 A.receive_packet(packet, None)
+print("Total transmissions:", network.transmission_count)
