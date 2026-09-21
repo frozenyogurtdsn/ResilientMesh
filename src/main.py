@@ -1,3 +1,12 @@
+class Packet: 
+    def __init__(self, source, destination, data, ttl):
+        self.source = source
+        self.destination = destination
+        self.data = data
+        self.ttl = ttl
+
+
+
 
 class node:
     def __init__(self, node_id):
@@ -13,6 +22,12 @@ C = node("C")
 A.neighbors = [B]
 B.neighbors = [A, C]
 C.neighbors = [B]
+
+packet = Packet("A", "C", "Hello from A", 5)
+
+print("Packet:", packet.source, "->", packet.destination)
+print("Data:", packet.data)
+print("TTL:", packet.ttl)
 
 print("A neighbors:", [node.node_id for node in A.neighbors])
 print("B neighbors:", [node.node_id for node in B.neighbors])
