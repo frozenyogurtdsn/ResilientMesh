@@ -19,12 +19,15 @@ class node:
 
     def send_packet(self, packet, next_node):
         if packet.ttl <= 0:
+            
+
             print(
                 f"{self.node_id}: Packet expired."
             )
             return
 
         packet.ttl -= 1
+
         self.network.record_transmission()
 
         print(
@@ -34,7 +37,6 @@ class node:
         )
 
         next_node.receive_packet(packet, self)
-
 
     def receive_packet(self, packet, sender):
         if sender is None:
@@ -50,6 +52,7 @@ class node:
 
         if packet.packet_id in self.seen_packets:
             self.network.record_duplicate()
+
             print(
                 f"{self.node_id}: Duplicate packet "
                 f"{packet.packet_id}. Dropping packet."
@@ -60,15 +63,16 @@ class node:
 
         if self.node_id == packet.destination:
             self.network.record_delivery()
+
             print(
                 f"{self.node_id} is the destination. "
                 f"Packet delivered."
             )
             return
 
-            print("Dropped packets:", network.dropped_packets)
-
         if packet.ttl <= 0:
+            self.network.record_drop()
+
             print(
                 f"{self.node_id}: Packet expired. Dropping packet."
             )
@@ -79,7 +83,6 @@ class node:
         for neighbor in self.neighbors:
             if neighbor != sender:
                 self.send_packet(packet, neighbor)
-
 
 class Network:
     
