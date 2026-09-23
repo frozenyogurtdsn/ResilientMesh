@@ -142,33 +142,66 @@ class Network:
             source_node.receive_packet(packet, None)
 
     def reset_metrics(self):
-     self.transmission_count = 0
-     self.delivered_packets = 0
-     self.duplicate_packets = 0
-     self.dropped_packets = 0
-     self.generated_packets = 0
+        self.transmission_count = 0
+        self.delivered_packets = 0
+        self.duplicate_packets = 0
+        self.dropped_packets = 0
+        self.generated_packets = 0
 
-     for node in self.nodes.values():
-        node.seen_packets.clear()
-        node.storage.clear()
+        for node in self.nodes.values():
+            node.seen_packets.clear()
+            node.storage.clear()
 
     def get_metrics(self):
-     delivery_rate = 0
+        delivery_rate = 0
 
-     if self.generated_packets > 0:
-        delivery_rate = (
-            self.delivered_packets
-            / self.generated_packets
+        if self.generated_packets > 0:
+            delivery_rate = (
+                self.delivered_packets
+                / self.generated_packets
+            )
+
+        return {
+            "generated": self.generated_packets,
+            "delivered": self.delivered_packets,
+            "duplicates": self.duplicate_packets,
+            "dropped": self.dropped_packets,
+            "transmissions": self.transmission_count,
+            "delivery_rate": delivery_rate
+        }
+
+    def create_packets(self, num_packets, source, destination, data, ttl):
+        packets = []
+
+        for i in range(num_packets):
+            packet = self.generate_packet(
+                f"P{i + 1}",
+                source,
+                destination,
+                data,
+                ttl
+            )
+
+            packets.append(packet)
+
+        return packets
+
+    def run_experiment(self, num_packets, source, destination, data, ttl):
+        self.reset_metrics()
+
+        packets = self.create_packets(
+            num_packets,
+            source,
+            destination,
+            data,
+            ttl
         )
 
-     return {
-        "generated": self.generated_packets,
-        "delivered": self.delivered_packets,
-        "duplicates": self.duplicate_packets,
-        "dropped": self.dropped_packets,
-        "transmissions": self.transmission_count,
-        "delivery_rate": delivery_rate
-    }
+        self.run_simulation(packets)
+
+        return self.get_metrics()
+    
+    
 
 network = Network()
 
@@ -186,33 +219,41 @@ network.connect("B", "C")
 
 num_packets = 10
 
-packets = []
+experiment_results = []
 
-for i in range(num_packets):
-    ttl = 5
-    packet = network.generate_packet(
-        f"P{i + 1}",
+for ttl in range(1, 6):
+    metrics = network.run_experiment(
+        num_packets,
         "A",
         "C",
         "Hello from A",
         ttl
     )
 
-    packets.append(packet)
+    experiment_results.append({
+        "ttl": ttl,
+        **metrics
+    })
 
+print("\nExperiment Results:")
 
+for result in experiment_results:
+    print(result)
 
-print("Packet:", packet.source, "->", packet.destination)
-print("Data:", packet.data)
-print("TTL:", packet.ttl)
+metrics = network.run_experiment(
+    num_packets,
+    "A",
+    "C",
+    "Hello from A",
+    ttl
+)
+
 
 print("A neighbors:", [node.node_id for node in A.neighbors])
 print("B neighbors:", [node.node_id for node in B.neighbors])
 print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
-network.run_simulation(packets)
-metrics = network.get_metrics()
 
 print("Metrics:", metrics)
 
