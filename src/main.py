@@ -19,9 +19,10 @@ class node:
 
     def send_packet(self, packet, next_node):
         if packet.ttl <= 0:
-            print(
-                f"{self.node_id}: Packet expired."
-            )
+            if self.network.verbose:
+                print(
+                    f"{self.node_id}: Packet expired."
+                )
             return
 
         forwarded_packet = Packet(
@@ -34,34 +35,37 @@ class node:
 
         self.network.record_transmission()
 
-        print(
-            f"{self.node_id} -> {next_node.node_id}: "
-            f"Packet from {forwarded_packet.source} "
-            f"to {forwarded_packet.destination} "
-            f"(TTL: {forwarded_packet.ttl})"
-        )
+        if self.network.verbose:
+            print(
+                f"{self.node_id} -> {next_node.node_id}: "
+                f"Packet from {forwarded_packet.source} "
+                f"to {forwarded_packet.destination} "
+                f"(TTL: {forwarded_packet.ttl})"
+            )
 
         next_node.receive_packet(forwarded_packet, self)
 
     def receive_packet(self, packet, sender):
-        if sender is None:
-            print(
-                f"{self.node_id} created packet "
-                f"{packet.packet_id}"
-            )
-        else:
-            print(
-                f"{self.node_id} received packet "
-                f"{packet.packet_id} from {sender.node_id}"
-            )
+        if self.network.verbose:
+            if sender is None:
+                print(
+                    f"{self.node_id} created packet "
+                    f"{packet.packet_id}"
+                )
+            else:
+                print(
+                    f"{self.node_id} received packet "
+                    f"{packet.packet_id} from {sender.node_id}"
+                )
 
         if packet.packet_id in self.seen_packets:
             self.network.record_duplicate()
 
-            print(
-                f"{self.node_id}: Duplicate packet "
-                f"{packet.packet_id}. Dropping packet."
-            )
+            if self.network.verbose:
+                print(
+                    f"{self.node_id}: Duplicate packet "
+                    f"{packet.packet_id}. Dropping packet."
+                )
             return
 
         self.seen_packets.add(packet.packet_id)
@@ -69,18 +73,20 @@ class node:
         if self.node_id == packet.destination:
             self.network.record_delivery()
 
-            print(
-                f"{self.node_id} is the destination. "
-                f"Packet delivered."
-            )
+            if self.network.verbose:
+                print(
+                    f"{self.node_id} is the destination. "
+                    f"Packet delivered."
+                )
             return
 
         if packet.ttl <= 0:
             self.network.record_drop()
 
-            print(
-                f"{self.node_id}: Packet expired. Dropping packet."
-            )
+            if self.network.verbose:
+                print(
+                    f"{self.node_id}: Packet expired. Dropping packet."
+                )
             return
 
         self.storage.append(packet)
@@ -89,13 +95,14 @@ class node:
             if neighbor != sender:
                 self.send_packet(packet, neighbor)
 class Network:
-    def __init__(self):
-        self.nodes = {}
-        self.transmission_count = 0
-        self.delivered_packets = 0
-        self.duplicate_packets = 0
-        self.dropped_packets = 0
-        self.generated_packets = 0
+    def __init__(self, verbose=False):
+     self.nodes = {}
+     self.transmission_count = 0
+     self.delivered_packets = 0
+     self.duplicate_packets = 0
+     self.dropped_packets = 0
+     self.generated_packets = 0
+     self.verbose = verbose
 
     def add_node(self, node):
         self.nodes[node.node_id] = node
@@ -202,21 +209,21 @@ class Network:
         return self.get_metrics()
     
     
-
-network = Network()
+network = Network(verbose=False)
 
 A = node("A")
 B = node("B")
 C = node("C")
+D = node("D")
 
 network.add_node(A)
 network.add_node(B)
 network.add_node(C)
+network.add_node(D)
 
 network.connect("A", "B")
-network.connect("A", "C")
 network.connect("B", "C")
-
+network.connect("C", "D")
 num_packets = 10
 
 experiment_results = []
@@ -225,7 +232,7 @@ for ttl in range(1, 6):
     metrics = network.run_experiment(
         num_packets,
         "A",
-        "C",
+        "D",
         "Hello from A",
         ttl
     )
@@ -240,29 +247,4 @@ print("\nExperiment Results:")
 for result in experiment_results:
     print(result)
 
-metrics = network.run_experiment(
-    num_packets,
-    "A",
-    "C",
-    "Hello from A",
-    ttl
-)
 
-
-print("A neighbors:", [node.node_id for node in A.neighbors])
-print("B neighbors:", [node.node_id for node in B.neighbors])
-print("C neighbors:", [node.node_id for node in C.neighbors])
-
-
-
-print("Metrics:", metrics)
-
-print("\n--- Resetting network ---")
-
-network.reset_metrics()
-
-print("Total transmissions:", network.transmission_count)
-print("Delivered packets:", network.delivered_packets)
-print("Duplicate packets:", network.duplicate_packets)
-print("Dropped packets:", network.dropped_packets)
-print("Generated packets:", network.generated_packets)
