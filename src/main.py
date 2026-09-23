@@ -151,6 +151,25 @@ class Network:
      for node in self.nodes.values():
         node.seen_packets.clear()
         node.storage.clear()
+
+    def get_metrics(self):
+     delivery_rate = 0
+
+     if self.generated_packets > 0:
+        delivery_rate = (
+            self.delivered_packets
+            / self.generated_packets
+        )
+
+     return {
+        "generated": self.generated_packets,
+        "delivered": self.delivered_packets,
+        "duplicates": self.duplicate_packets,
+        "dropped": self.dropped_packets,
+        "transmissions": self.transmission_count,
+        "delivery_rate": delivery_rate
+    }
+
 network = Network()
 
 A = node("A")
@@ -165,15 +184,18 @@ network.connect("A", "B")
 network.connect("A", "C")
 network.connect("B", "C")
 
+num_packets = 10
+
 packets = []
 
-for i in range(10):
+for i in range(num_packets):
+    ttl = 5
     packet = network.generate_packet(
         f"P{i + 1}",
         "A",
         "C",
         "Hello from A",
-        5
+        ttl
     )
 
     packets.append(packet)
@@ -190,21 +212,11 @@ print("C neighbors:", [node.node_id for node in C.neighbors])
 
 
 network.run_simulation(packets)
-print("Total transmissions:", network.transmission_count)
-print("Delivered packets:", network.delivered_packets)
-print("Duplicate packets:", network.duplicate_packets)
-print("Dropped packets:", network.dropped_packets)
-print("Generated packets:", network.generated_packets)
+metrics = network.get_metrics()
 
-if network.generated_packets > 0:
-    delivery_rate = (
-        network.delivered_packets
-        / network.generated_packets
-    )
+print("Metrics:", metrics)
 
-    print("Delivery rate:", delivery_rate)
-
-    print("\n--- Resetting network ---")
+print("\n--- Resetting network ---")
 
 network.reset_metrics()
 
