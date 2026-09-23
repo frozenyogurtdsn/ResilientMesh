@@ -192,6 +192,24 @@ class Network:
             packets.append(packet)
 
         return packets
+    def create_line_topology(self, num_nodes):
+        self.nodes = {}
+
+        previous_node = None
+
+        for i in range(num_nodes):
+            node_id = chr(ord("A") + i)
+            new_node = node(node_id)
+
+            self.add_node(new_node)
+
+            if previous_node is not None:
+                self.connect(
+                    previous_node.node_id,
+                    new_node.node_id
+                )
+
+            previous_node = new_node
 
     def run_experiment(self, num_packets, source, destination, data, ttl):
         self.reset_metrics()
@@ -211,19 +229,7 @@ class Network:
     
 network = Network(verbose=False)
 
-A = node("A")
-B = node("B")
-C = node("C")
-D = node("D")
-
-network.add_node(A)
-network.add_node(B)
-network.add_node(C)
-network.add_node(D)
-
-network.connect("A", "B")
-network.connect("B", "C")
-network.connect("C", "D")
+network.create_line_topology(8)
 num_packets = 10
 
 experiment_results = []
@@ -232,7 +238,7 @@ for ttl in range(1, 6):
     metrics = network.run_experiment(
         num_packets,
         "A",
-        "D",
+        list(network.nodes.keys())[-1],
         "Hello from A",
         ttl
     )
