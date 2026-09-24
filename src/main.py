@@ -160,22 +160,30 @@ class Network:
             node.storage.clear()
 
     def get_metrics(self):
-        delivery_rate = 0
+     delivery_rate = 0
+     duplicate_ratio = 0
 
-        if self.generated_packets > 0:
-            delivery_rate = (
-                self.delivered_packets
-                / self.generated_packets
-            )
+     if self.generated_packets > 0:
+        delivery_rate = (
+            self.delivered_packets
+            / self.generated_packets
+        )
 
-        return {
-            "generated": self.generated_packets,
-            "delivered": self.delivered_packets,
-            "duplicates": self.duplicate_packets,
-            "dropped": self.dropped_packets,
-            "transmissions": self.transmission_count,
-            "delivery_rate": delivery_rate
-        }
+     if self.transmission_count > 0:
+        duplicate_ratio = (
+            self.duplicate_packets
+            / self.transmission_count
+        )
+
+     return {
+        "generated": self.generated_packets,
+        "delivered": self.delivered_packets,
+        "duplicates": self.duplicate_packets,
+        "dropped": self.dropped_packets,
+        "transmissions": self.transmission_count,
+        "delivery_rate": delivery_rate,
+        "duplicate_ratio": duplicate_ratio
+    }
 
     def create_packets(self, num_packets, source, destination, data, ttl):
         packets = []
@@ -254,31 +262,54 @@ class Network:
 
         return self.get_metrics()
     
+
+    def run_connectivity_experiment(
+     self,
+     num_nodes,
+     connectivity_values,
+     num_packets,
+     source,
+     destination,
+     data,
+     ttl
+):
+     results = []
+ 
+     for connectivity in connectivity_values:
+        self.create_mesh_topology(
+            num_nodes,
+            connectivity
+        )
+
+        metrics = self.run_experiment(
+            num_packets,
+            source,
+            destination,
+            data,
+            ttl
+        )
+
+        results.append({
+            "connectivity": connectivity,
+            **metrics
+        })
+
+     return results
+    
     
 network = Network(verbose=False)
 
 connectivity_values = [1, 2, 3, 4]
 
-experiment_results = []
-
-for connectivity in connectivity_values:
-    network.create_mesh_topology(10, connectivity)
-
-    source = "A"
-    destination = "J"
-
-    results = network.run_experiment(
-        100,
-        source,
-        destination,
-        "Hello from A",
-        10
-    )
-
-    experiment_results.append({
-        "connectivity": connectivity,
-        **results
-    })
+experiment_results = network.run_connectivity_experiment(
+    num_nodes=10,
+    connectivity_values=connectivity_values,
+    num_packets=100,
+    source="A",
+    destination="J",
+    data="Hello from A",
+    ttl=10
+)
 
 print("\nExperiment Results:")
 
