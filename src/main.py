@@ -321,6 +321,8 @@ class Network:
         return self.get_metrics()
     
 
+
+
     def run_connectivity_experiment(
      self,
      num_nodes,
@@ -427,51 +429,101 @@ class Network:
             })
 
      return results
+        
+    def run_network_size_experiment(
+        self,
+        network_sizes,
+        edge_probability,
+        num_packets,
+        data,
+        ttl,
+        seeds
+    ):
+        results = []
+
+        for num_nodes in network_sizes:
+            source = "A"
+            destination = chr(ord("A") + num_nodes - 1)
+
+            for seed in seeds:
+                self.create_random_topology(
+                    num_nodes,
+                    edge_probability,
+                    seed
+                )
+
+                metrics = self.run_experiment(
+                    num_packets,
+                    source,
+                    destination,
+                    data,
+                    ttl
+                )
+
+                num_edges = self.get_edge_count()
+                average_degree = self.get_average_degree()
+
+                results.append({
+                    "num_nodes": num_nodes,
+                    "num_edges": num_edges,
+                    "average_degree": average_degree,
+                    "seed": seed,
+                    "edge_probability": edge_probability,
+                    "ttl": ttl,
+                    **metrics
+                })
+
+        return results
+
+
+
+
+
+
+
+
+
 
     
-    def run_network_size_experiment(
-     self,
-     network_sizes,
-     edge_probability,
-     num_packets,
-     data,
-     ttl,
-     seeds
-):
-     results = []
+    def run_traffic_load_experiment(
+        self,
+        num_nodes,
+        edge_probability,
+        packet_counts,
+        source,
+        destination,
+        data,
+        ttl,
+        seeds
+    ):
+        results = []
 
-     for num_nodes in network_sizes:
-        source = "A"
-        destination = chr(ord("A") + num_nodes - 1)
+        for num_packets in packet_counts:
+            for seed in seeds:
 
-        for seed in seeds:
-            self.create_random_topology(
-                num_nodes,
-                edge_probability,
-                seed
-            )
+                self.create_random_topology(
+                    num_nodes,
+                    edge_probability,
+                    seed
+                )
 
-            metrics = self.run_experiment(
-                      num_packets,
-                      source,
-                      destination,
-                      data,
-                      ttl
-            )
+                metrics = self.run_experiment(
+                    num_packets,
+                    source,
+                    destination,
+                    data,
+                    ttl
+                )
 
-            num_edges = self.get_edge_count()
-            average_degree = self.get_average_degree()
+                results.append({
+                    "num_packets": num_packets,
+                    "seed": seed,
+                    "edge_probability": edge_probability,
+                    "ttl": ttl,
+                    **metrics
+                })
 
-            results.append({
-              "num_nodes": num_nodes,
-             "num_edges": num_edges,
-             "average_degree": average_degree,
-             "seed": seed,
-             "edge_probability": edge_probability,
-             "ttl": ttl,
-             **metrics
-           })
-     return results
+        return results
 
     def save_results_to_csv(self, results, filename):
      import csv
@@ -589,6 +641,8 @@ network_size_results = network.run_network_size_experiment(
     seeds=seeds
 )
 
+    
+
 print("\nNetwork Size Experiment Results:")
 
 for num_nodes in network_sizes:
@@ -608,4 +662,37 @@ for num_nodes in network_sizes:
 network.save_results_to_csv(
     network_size_results,
     "results/network_size_baseline.csv"
+)
+
+
+packet_counts = [10, 50, 100, 200, 500]
+seeds = list(range(1, 21))
+
+traffic_results = network.run_traffic_load_experiment(
+    num_nodes=10,
+    edge_probability=0.2,
+    packet_counts=packet_counts,
+    source="A",
+    destination="J",
+    data="Hello from A",
+    ttl=20,
+    seeds=seeds
+)
+print("\nTraffic Load Experiment Results:")
+
+for num_packets in packet_counts:
+    packet_results = [
+        result
+        for result in traffic_results
+        if result["num_packets"] == num_packets
+    ]
+
+    summary = network.summarize_results(packet_results)
+
+    print(f"\nPackets: {num_packets}")
+    print(summary)
+
+network.save_results_to_csv(
+    traffic_results,
+    "results/traffic_load_baseline.csv"
 )
