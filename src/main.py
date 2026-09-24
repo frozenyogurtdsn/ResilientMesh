@@ -220,6 +220,21 @@ class Network:
         self.connect("A", "C")
         self.connect("B", "D")
         self.connect("C", "D")
+    
+    def create_mesh_topology(self, num_nodes, connectivity):
+        self.nodes = {}
+
+        for i in range(num_nodes):
+            node_id = chr(ord("A") + i)
+            self.add_node(node(node_id))
+
+        for i in range(num_nodes):
+            for j in range(i + 1, num_nodes):
+                if j - i <= connectivity:
+                    self.connect(
+                        chr(ord("A") + i),
+                        chr(ord("A") + j)
+                    )
         
         
 
@@ -242,29 +257,26 @@ class Network:
     
 network = Network(verbose=False)
 
-network_sizes = [4, 6, 8, 10]
+connectivity_values = [1, 2, 3, 4]
 
 experiment_results = []
 
-for size in network_sizes:
-    network.create_line_topology(size)
+for connectivity in connectivity_values:
+    network.create_mesh_topology(10, connectivity)
 
     source = "A"
-    destination = list(network.nodes.keys())[-1]
-
-    ttl = size - 1
+    destination = "J"
 
     results = network.run_experiment(
         100,
         source,
         destination,
         "Hello from A",
-        ttl
+        10
     )
 
     experiment_results.append({
-        "nodes": size,
-        "ttl": ttl,
+        "connectivity": connectivity,
         **results
     })
 
