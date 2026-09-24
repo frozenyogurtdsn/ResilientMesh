@@ -210,6 +210,19 @@ class Network:
                 )
 
             previous_node = new_node
+    def create_diamond_topology(self):
+        self.nodes = {}
+
+        for node_id in ["A", "B", "C", "D"]:
+            self.add_node(node(node_id))
+
+        self.connect("A", "B")
+        self.connect("A", "C")
+        self.connect("B", "D")
+        self.connect("C", "D")
+        
+        
+
 
     def run_experiment(self, num_packets, source, destination, data, ttl):
         self.reset_metrics()
@@ -229,28 +242,33 @@ class Network:
     
 network = Network(verbose=False)
 
-network.create_line_topology(8)
-num_packets = 10
+network_sizes = [4, 6, 8, 10]
 
 experiment_results = []
 
-for ttl in range(1, 6):
-    metrics = network.run_experiment(
-        num_packets,
-        "A",
-        list(network.nodes.keys())[-1],
+for size in network_sizes:
+    network.create_line_topology(size)
+
+    source = "A"
+    destination = list(network.nodes.keys())[-1]
+
+    ttl = size - 1
+
+    results = network.run_experiment(
+        100,
+        source,
+        destination,
         "Hello from A",
         ttl
     )
 
     experiment_results.append({
+        "nodes": size,
         "ttl": ttl,
-        **metrics
+        **results
     })
 
 print("\nExperiment Results:")
 
 for result in experiment_results:
     print(result)
-
-
