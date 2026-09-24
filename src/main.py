@@ -364,9 +364,43 @@ class Network:
 
      return results
 
+    def run_ttl_experiment(
+     self,
+     num_nodes,
+     edge_probability,
+     ttl_values,
+     num_packets,
+     source,
+     destination,
+     data,
+     seeds
+):
+     results = []
 
+     for ttl in ttl_values:
+        for seed in seeds:
+            self.create_random_topology(
+                num_nodes,
+                edge_probability,
+                seed
+            )
 
+            metrics = self.run_experiment(
+                num_packets,
+                source,
+                destination,
+                data,
+                ttl
+            )
 
+            results.append({
+                "ttl": ttl,
+                "seed": seed,
+                "edge_probability": edge_probability,
+                **metrics
+            })
+
+     return results
 
 
     def save_results_to_csv(self, results, filename):
@@ -431,35 +465,37 @@ class Network:
 
 network = Network(verbose=False)
 
-edge_probabilities = [0.1, 0.2, 0.3, 0.4]
+ttl_values = list(range(1, 11))
 seeds = list(range(1, 21))
 
-all_results = []
+experiment_results = network.run_ttl_experiment(
+    num_nodes=10,
+    edge_probability=0.2,
+    ttl_values=ttl_values,
+    num_packets=100,
+    source="A",
+    destination="J",
+    data="Hello from A",
+    seeds=seeds
+)
 
-for edge_probability in edge_probabilities:
-    experiment_results = network.run_random_topology_experiment(
-        num_nodes=10,
-        edge_probability=edge_probability,
-        num_packets=100,
-        source="A",
-        destination="J",
-        data="Hello from A",
-        ttl=10,
-        seeds=seeds
-    )
+print("\nTTL Experiment Results:")
 
-    all_results.extend(experiment_results)
+for ttl in ttl_values:
+    ttl_results = [
+        result
+        for result in experiment_results
+        if result["ttl"] == ttl
+    ]
 
     summary = network.summarize_results(
-        experiment_results
+        ttl_results
     )
 
-    print(
-        f"\nEdge Probability: {edge_probability}"
-    )
+    print(f"\nTTL: {ttl}")
     print(summary)
 
 network.save_results_to_csv(
-    all_results,
-    "results/random_density_baseline.csv"
+    experiment_results,
+    "results/ttl_baseline.csv"
 )
