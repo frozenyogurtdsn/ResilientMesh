@@ -276,7 +276,21 @@ class Network:
 
             if rng.random() < edge_probability:
                 self.connect(node_a, node_b)  
-        
+
+    def get_edge_count(self):
+     total_connections = 0
+
+     for current_node in self.nodes.values():
+        total_connections += len(current_node.neighbors)
+
+     return total_connections // 2
+
+
+    def get_average_degree(self):
+     if not self.nodes:
+        return 0
+
+     return (2 * self.get_edge_count()) / len(self.nodes)
 
 
     def run_experiment(self, num_packets, source, destination, data, ttl):
@@ -426,25 +440,26 @@ class Network:
             )
 
             metrics = self.run_experiment(
-                num_packets,
-                source,
-                destination,
-                data,
-                ttl
+                      num_packets,
+                      source,
+                      destination,
+                      data,
+                      ttl
             )
 
+            num_edges = self.get_edge_count()
+            average_degree = self.get_average_degree()
+
             results.append({
-                "num_nodes": num_nodes,
-                "seed": seed,
-                "edge_probability": edge_probability,
-                "ttl": ttl,
-                **metrics
-            })
-
+              "num_nodes": num_nodes,
+             "num_edges": num_edges,
+             "average_degree": average_degree,
+             "seed": seed,
+             "edge_probability": edge_probability,
+             "ttl": ttl,
+             **metrics
+           })
      return results
-
-
-
 
     def save_results_to_csv(self, results, filename):
      import csv
