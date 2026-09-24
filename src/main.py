@@ -243,7 +243,39 @@ class Network:
                         chr(ord("A") + i),
                         chr(ord("A") + j)
                     )
-        
+
+    def create_random_topology(self, num_nodes, edge_probability, seed):
+     import random
+
+     self.nodes = {}
+
+     rng = random.Random(seed)
+ 
+     for i in range(num_nodes):
+        node_id = chr(ord("A") + i)
+        self.add_node(node(node_id))
+
+    # First create a random spanning tree
+    # so the network is guaranteed to be connected.
+     for i in range(1, num_nodes):
+        parent = rng.randrange(i)
+
+        self.connect(
+            chr(ord("A") + i),
+            chr(ord("A") + parent)
+        )
+
+    # Then add extra random edges.
+     for i in range(num_nodes):
+        for j in range(i + 1, num_nodes):
+            node_a = chr(ord("A") + i)
+            node_b = chr(ord("A") + j)
+
+            if node_b in self.nodes[node_a].neighbors:
+                continue
+
+            if rng.random() < edge_probability:
+                self.connect(node_a, node_b)  
         
 
 
@@ -296,6 +328,47 @@ class Network:
 
      return results
     
+    def run_random_topology_experiment(
+     self,
+     num_nodes,
+     edge_probability,
+     num_packets,
+     source,
+     destination,
+     data,
+     ttl,
+     seeds
+):
+     results = []
+
+     for seed in seeds:
+        self.create_random_topology(
+            num_nodes,
+            edge_probability,
+            seed
+        )
+
+        metrics = self.run_experiment(
+            num_packets,
+            source,
+            destination,
+            data,
+            ttl
+        )
+
+        results.append({
+            "seed": seed,
+            "edge_probability": edge_probability,
+            **metrics
+        })
+
+     return results
+
+
+
+
+
+
     def save_results_to_csv(self, results, filename):
      import csv
      import os
@@ -316,32 +389,77 @@ class Network:
 
         writer.writeheader()
         writer.writerows(results)
+
+
+
+    def summarize_results(self, results):
+     import statistics
+
+     if not results:
+        return {}
+
+     transmissions = [
+        result["transmissions"]
+        for result in results
+     ]
+
+     duplicates = [
+        result["duplicates"]
+        for result in results
+     ]
+
+     duplicate_ratios = [
+        result["duplicate_ratio"]
+        for result in results
+     ]
+
+     delivery_rates = [
+        result["delivery_rate"]
+        for result in results
+     ]
+
+     return {
+        "mean_transmissions": statistics.mean(transmissions),
+        "std_transmissions": statistics.stdev(transmissions),
+        "mean_duplicates": statistics.mean(duplicates),
+        "std_duplicates": statistics.stdev(duplicates),
+        "mean_duplicate_ratio": statistics.mean(duplicate_ratios),
+        "std_duplicate_ratio": statistics.stdev(duplicate_ratios),
+        "mean_delivery_rate": statistics.mean(delivery_rates),
+        "std_delivery_rate": statistics.stdev(delivery_rates)
+     }
+
 network = Network(verbose=False)
 
-connectivity_values = [1, 2, 3, 4]
+edge_probabilities = [0.1, 0.2, 0.3, 0.4]
+seeds = list(range(1, 21))
 
-experiment_results = network.run_connectivity_experiment(
-    num_nodes=10,
-    connectivity_values=connectivity_values,
-    num_packets=100,
-    source="A",
-    destination="J",
-    data="Hello from A",
-    ttl=10
-)
+all_results = []
 
-print("\nExperiment Results:")
+for edge_probability in edge_probabilities:
+    experiment_results = network.run_random_topology_experiment(
+        num_nodes=10,
+        edge_probability=edge_probability,
+        num_packets=100,
+        source="A",
+        destination="J",
+        data="Hello from A",
+        ttl=10,
+        seeds=seeds
+    )
 
-for result in experiment_results:
-    print(result)
+    all_results.extend(experiment_results)
 
+    summary = network.summarize_results(
+        experiment_results
+    )
 
-print("\nExperiment Results:")
-
-for result in experiment_results:
-    print(result)
+    print(
+        f"\nEdge Probability: {edge_probability}"
+    )
+    print(summary)
 
 network.save_results_to_csv(
-    experiment_results,
-    "results/connectivity_baseline.csv"
+    all_results,
+    "results/random_density_baseline.csv"
 )
