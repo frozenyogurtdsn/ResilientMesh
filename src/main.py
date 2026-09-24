@@ -402,6 +402,49 @@ class Network:
 
      return results
 
+    
+    def run_network_size_experiment(
+     self,
+     network_sizes,
+     edge_probability,
+     num_packets,
+     data,
+     ttl,
+     seeds
+):
+     results = []
+
+     for num_nodes in network_sizes:
+        source = "A"
+        destination = chr(ord("A") + num_nodes - 1)
+
+        for seed in seeds:
+            self.create_random_topology(
+                num_nodes,
+                edge_probability,
+                seed
+            )
+
+            metrics = self.run_experiment(
+                num_packets,
+                source,
+                destination,
+                data,
+                ttl
+            )
+
+            results.append({
+                "num_nodes": num_nodes,
+                "seed": seed,
+                "edge_probability": edge_probability,
+                "ttl": ttl,
+                **metrics
+            })
+
+     return results
+
+
+
 
     def save_results_to_csv(self, results, filename):
      import csv
@@ -498,4 +541,37 @@ for ttl in ttl_values:
 network.save_results_to_csv(
     experiment_results,
     "results/ttl_baseline.csv"
+)
+
+network_sizes = [5, 10, 15, 20]
+seeds = list(range(1, 21))
+
+network_size_results = network.run_network_size_experiment(
+    network_sizes=network_sizes,
+    edge_probability=0.2,
+    num_packets=100,
+    data="Hello from A",
+    ttl=20,
+    seeds=seeds
+)
+
+print("\nNetwork Size Experiment Results:")
+
+for num_nodes in network_sizes:
+    size_results = [
+        result
+        for result in network_size_results
+        if result["num_nodes"] == num_nodes
+    ]
+
+    summary = network.summarize_results(
+        size_results
+    )
+
+    print(f"\nNodes: {num_nodes}")
+    print(summary)
+
+network.save_results_to_csv(
+    network_size_results,
+    "results/network_size_baseline.csv"
 )
