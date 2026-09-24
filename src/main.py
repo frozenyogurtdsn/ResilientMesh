@@ -296,7 +296,26 @@ class Network:
 
      return results
     
-    
+    def save_results_to_csv(self, results, filename):
+     import csv
+     import os
+
+     if not results:
+        return
+
+     folder = os.path.dirname(filename)
+
+     if folder:
+        os.makedirs(folder, exist_ok=True)
+
+     with open(filename, "w", newline="") as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=results[0].keys()
+        )
+
+        writer.writeheader()
+        writer.writerows(results)
 network = Network(verbose=False)
 
 connectivity_values = [1, 2, 3, 4]
@@ -315,3 +334,14 @@ print("\nExperiment Results:")
 
 for result in experiment_results:
     print(result)
+
+
+print("\nExperiment Results:")
+
+for result in experiment_results:
+    print(result)
+
+network.save_results_to_csv(
+    experiment_results,
+    "results/connectivity_baseline.csv"
+)
