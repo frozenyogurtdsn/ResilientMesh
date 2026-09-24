@@ -5,6 +5,7 @@ class Packet:
         self.destination = destination
         self.data = data
         self.ttl = ttl
+        self.hops = 0
 
 
 
@@ -31,7 +32,9 @@ class node:
             packet.destination,
             packet.data,
             packet.ttl - 1
+            
         )
+        forwarded_packet.hops = packet.hops + 1
 
         self.network.record_transmission()
 
@@ -71,7 +74,7 @@ class node:
         self.seen_packets.add(packet.packet_id)
 
         if self.node_id == packet.destination:
-            self.network.record_delivery()
+            self.network.record_delivery(packet.hops)
 
             if self.network.verbose:
                 print(
@@ -102,6 +105,7 @@ class Network:
      self.duplicate_packets = 0
      self.dropped_packets = 0
      self.generated_packets = 0
+     self.delivered_hops = []
      self.verbose = verbose
 
     def add_node(self, node):
@@ -121,8 +125,9 @@ class Network:
     def record_transmission(self):
         self.transmission_count += 1
 
-    def record_delivery(self):
+    def record_delivery(self, hops):
         self.delivered_packets += 1
+        self.delivered_hops.append(hops)
 
     def record_duplicate(self):
         self.duplicate_packets += 1
@@ -154,6 +159,7 @@ class Network:
         self.duplicate_packets = 0
         self.dropped_packets = 0
         self.generated_packets = 0
+        self.delivered_hops = []
 
         for node in self.nodes.values():
             node.seen_packets.clear()
@@ -162,6 +168,7 @@ class Network:
     def get_metrics(self):
      delivery_rate = 0
      duplicate_ratio = 0
+     mean_hops = 0
 
      if self.generated_packets > 0:
         delivery_rate = (
@@ -174,7 +181,11 @@ class Network:
             self.duplicate_packets
             / self.transmission_count
         )
-
+     if self.delivered_hops:
+        mean_hops = (
+             sum(self.delivered_hops)
+            / len(self.delivered_hops)
+         )
      return {
         "generated": self.generated_packets,
         "delivered": self.delivered_packets,
@@ -182,7 +193,8 @@ class Network:
         "dropped": self.dropped_packets,
         "transmissions": self.transmission_count,
         "delivery_rate": delivery_rate,
-        "duplicate_ratio": duplicate_ratio
+        "duplicate_ratio": duplicate_ratio,
+        "mean_hops": mean_hops
     }
 
     def create_packets(self, num_packets, source, destination, data, ttl):
@@ -510,6 +522,11 @@ class Network:
         for result in results
      ]
 
+     mean_hops = [
+     result["mean_hops"]
+     for result in results
+     ]
+
      return {
         "mean_transmissions": statistics.mean(transmissions),
         "std_transmissions": statistics.stdev(transmissions),
@@ -518,7 +535,9 @@ class Network:
         "mean_duplicate_ratio": statistics.mean(duplicate_ratios),
         "std_duplicate_ratio": statistics.stdev(duplicate_ratios),
         "mean_delivery_rate": statistics.mean(delivery_rates),
-        "std_delivery_rate": statistics.stdev(delivery_rates)
+        "std_delivery_rate": statistics.stdev(delivery_rates),
+        "mean_hops": statistics.mean(mean_hops),
+        "std_hops": statistics.stdev(mean_hops)
      }
 
 network = Network(verbose=False)
