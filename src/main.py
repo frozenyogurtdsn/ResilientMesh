@@ -1,3 +1,37 @@
+class BloomFilter:
+    def __init__(self, size, num_hashes):
+        self.size = size
+        self.num_hashes = num_hashes
+        self.bits = [False] * size
+
+    def _hash(self, item, seed):
+       import hashlib
+
+       value = f"{seed}:{item}".encode()
+
+       digest = hashlib.sha256(value).digest()
+
+       hash_value = int.from_bytes(
+        digest,
+        byteorder="big"
+    )
+
+       return hash_value % self.size
+    def add(self, item):
+        for i in range(self.num_hashes):
+            index = self._hash(item, i)
+            self.bits[index] = True
+
+    def contains(self, item):
+        for i in range(self.num_hashes):
+            index = self._hash(item, i)
+
+            if not self.bits[index]:
+                return False
+
+        return True
+
+
 class Packet:
     def __init__(self, packet_id, source, destination, data, ttl):
         self.packet_id = packet_id
@@ -695,4 +729,60 @@ for num_packets in packet_counts:
 network.save_results_to_csv(
     traffic_results,
     "results/traffic_load_baseline.csv"
+)
+import math
+
+
+
+
+print("\nBloom Filter FPR Experiment:")
+
+bloom_sizes = [250, 500, 1000, 2000, 4000]
+
+num_hashes = 3
+inserted_items = 100
+test_count = 10000
+
+bloom_results = []
+
+for size in bloom_sizes:
+    bf = BloomFilter(
+        size=size,
+        num_hashes=num_hashes
+    )
+
+    for i in range(inserted_items):
+        bf.add(f"P{i}")
+
+    false_positives = 0
+
+    for i in range(inserted_items, inserted_items + test_count):
+        if bf.contains(f"P{i}"):
+            false_positives += 1
+
+    observed_fpr = false_positives / test_count
+
+    theoretical_fpr = (
+        1 - math.exp(
+            -num_hashes * inserted_items / size
+        )
+    ) ** num_hashes
+
+    result = {
+        "size": size,
+        "num_hashes": num_hashes,
+        "inserted_items": inserted_items,
+        "test_count": test_count,
+        "false_positives": false_positives,
+        "observed_fpr": observed_fpr,
+        "theoretical_fpr": theoretical_fpr
+    }
+
+    bloom_results.append(result)
+
+    print(result)
+    
+network.save_results_to_csv(
+    bloom_results,
+    "results/bloom_fpr_baseline.csv"
 )
