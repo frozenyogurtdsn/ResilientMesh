@@ -45,11 +45,17 @@ class Packet:
 
 
 class node:
-    def __init__(self, node_id):
+    def __init__(self, node_id, dedup_mode="exact"):
         self.node_id = node_id
         self.neighbors = []
         self.storage = []
         self.seen_packets = set()
+        self.bloom_filter = BloomFilter(
+         size=1000,
+         num_hashes=3
+        ) if dedup_mode == "bloom" else None
+
+        self.dedup_mode = dedup_mode
         self.network = None
 
     def send_packet(self, packet, next_node):
@@ -83,19 +89,23 @@ class node:
         next_node.receive_packet(forwarded_packet, self)
 
     def receive_packet(self, packet, sender):
-        if self.network.verbose:
-            if sender is None:
-                print(
-                    f"{self.node_id} created packet "
-                    f"{packet.packet_id}"
-                )
-            else:
-                print(
-                    f"{self.node_id} received packet "
-                    f"{packet.packet_id} from {sender.node_id}"
-                )
+       
+     if self.network.verbose:
+        if sender is None:
+            print(
+                f"{self.node_id} created packet "
+                f"{packet.packet_id}"
+            )
+        else:
+            print(
+                f"{self.node_id} received packet "
+                f"{packet.packet_id} from {sender.node_id}"
+            )
 
-        if packet.packet_id in self.seen_packets:
+     if self.dedup_mode == "exact":
+        already_seen = packet.packet_id in self.seen_packets
+
+        if already_seen:
             self.network.record_duplicate()
 
             if self.network.verbose:
@@ -103,40 +113,75 @@ class node:
                     f"{self.node_id}: Duplicate packet "
                     f"{packet.packet_id}. Dropping packet."
                 )
+
             return
 
+     else:
+        already_seen = self.bloom_filter.contains(
+            packet.packet_id
+        )
+
+        if already_seen:
+            if packet.packet_id in self.seen_packets:
+                self.network.record_duplicate()
+
+                if self.network.verbose:
+                    print(
+                        f"{self.node_id}: Duplicate packet "
+                        f"{packet.packet_id}. Dropping packet."
+                    )
+            else:
+                self.network.record_false_positive()
+
+                if self.network.verbose:
+                    print(
+                        f"{self.node_id}: Bloom Filter false positive "
+                        f"for packet {packet.packet_id}. Dropping packet."
+                    )
+
+            return
+
+     if self.dedup_mode == "exact":
         self.seen_packets.add(packet.packet_id)
+     else:
+        self.bloom_filter.add(packet.packet_id)
 
-        if self.node_id == packet.destination:
-            self.network.record_delivery(packet.hops)
+     if self.node_id == packet.destination:
+        self.network.record_delivery(packet.hops)
 
-            if self.network.verbose:
-                print(
-                    f"{self.node_id} is the destination. "
-                    f"Packet delivered."
-                )
-            return
+        if self.network.verbose:
+            print(
+                f"{self.node_id} is the destination. "
+                f"Packet delivered."
+            )
 
-        if packet.ttl <= 0:
-            self.network.record_drop()
+        return
 
-            if self.network.verbose:
-                print(
-                    f"{self.node_id}: Packet expired. Dropping packet."
-                )
-            return
+     if packet.ttl <= 0:
+        self.network.record_drop()
 
-        self.storage.append(packet)
+        if self.network.verbose:
+            print(
+                f"{self.node_id}: Packet expired. Dropping packet."
+            )
 
-        for neighbor in self.neighbors:
-            if neighbor != sender:
-                self.send_packet(packet, neighbor)
+        return
+
+     if self.network.verbose:
+        print(f"{self.node_id}: Forwarding packet {packet.packet_id}.")
+
+     self.storage.append(packet)
+
+     for neighbor in self.neighbors:
+        if neighbor != sender:
+            self.send_packet(packet, neighbor)
 class Network:
     def __init__(self, verbose=False):
      self.nodes = {}
      self.transmission_count = 0
      self.delivered_packets = 0
      self.duplicate_packets = 0
+     self.false_positive_drops = 0
      self.dropped_packets = 0
      self.generated_packets = 0
      self.delivered_hops = []
@@ -165,6 +210,9 @@ class Network:
 
     def record_duplicate(self):
         self.duplicate_packets += 1
+    
+    def record_false_positive(self):
+        self.false_positive_drops += 1
 
     def record_drop(self):
         self.dropped_packets += 1
@@ -191,12 +239,20 @@ class Network:
         self.transmission_count = 0
         self.delivered_packets = 0
         self.duplicate_packets = 0
+        self.false_positive_drops = 0
         self.dropped_packets = 0
         self.generated_packets = 0
         self.delivered_hops = []
 
         for node in self.nodes.values():
             node.seen_packets.clear()
+
+            if node.bloom_filter is not None:
+              node.bloom_filter = BloomFilter(
+                size=1000,
+                num_hashes=3
+        )
+
             node.storage.clear()
 
     def get_metrics(self):
@@ -246,24 +302,28 @@ class Network:
             packets.append(packet)
 
         return packets
-    def create_line_topology(self, num_nodes):
-        self.nodes = {}
+    def create_bloom_line_topology(self, num_nodes):
+     self.nodes = {}
 
-        previous_node = None
+     previous_node = None
 
-        for i in range(num_nodes):
-            node_id = chr(ord("A") + i)
-            new_node = node(node_id)
+     for i in range(num_nodes):
+        node_id = chr(ord("A") + i)
 
-            self.add_node(new_node)
+        new_node = node(
+            node_id,
+            dedup_mode="bloom"
+        )
 
-            if previous_node is not None:
-                self.connect(
-                    previous_node.node_id,
-                    new_node.node_id
-                )
+        self.add_node(new_node)
 
-            previous_node = new_node
+        if previous_node is not None:
+            self.connect(
+                previous_node.node_id,
+                new_node.node_id
+            )
+
+        previous_node = new_node
     def create_diamond_topology(self):
         self.nodes = {}
 
@@ -785,4 +845,89 @@ for size in bloom_sizes:
 network.save_results_to_csv(
     bloom_results,
     "results/bloom_fpr_baseline.csv"
+)
+
+print("\nBloom Filter Network Test:")
+
+bloom_network = Network(verbose=True)
+
+bloom_network.create_bloom_line_topology(3)
+
+metrics = bloom_network.run_experiment(
+    num_packets=1,
+    source="A",
+    destination="C",
+    data="Hello from A",
+    ttl=5
+)
+
+print(metrics)
+
+print("\nBloom Filter False Positive Network Test:")
+
+test_node = node(
+    "X",
+    dedup_mode="bloom"
+)
+
+for i in range(100):
+    test_node.bloom_filter.add(f"P{i}")
+
+false_positive_count = 0
+
+for i in range(100, 10100):
+    if test_node.bloom_filter.contains(f"P{i}"):
+        false_positive_count += 1
+
+print(
+    "False positives:",
+    false_positive_count
+)
+
+print("\nControlled False Positive Test:")
+
+test_network = Network(verbose=True)
+
+test_node = node(
+    "X",
+    dedup_mode="bloom"
+)
+
+test_network.add_node(test_node)
+
+for i in range(100):
+    packet_id = f"P{i}"
+    test_node.bloom_filter.add(packet_id)
+    test_node.seen_packets.add(packet_id)
+
+for i in range(100, 10100):
+    packet_id = f"P{i}"
+
+    if test_node.bloom_filter.contains(packet_id):
+        print("Testing packet:", packet_id)
+        print("In seen_packets:", packet_id in test_node.seen_packets)
+
+        test_packet = Packet(
+            packet_id,
+            "A",
+            "Z",
+            "Test",
+            5
+        )
+        
+        print("Dedup mode:", test_node.dedup_mode)
+        test_node.receive_packet(
+            test_packet,
+            None
+        )
+
+        break
+
+print(
+    "Recorded false-positive drops:",
+    test_network.false_positive_drops
+)
+print(
+    "Recorded false-positive drops:",
+    bloom_network.false_positive_drops
 )
