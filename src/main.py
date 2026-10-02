@@ -280,6 +280,7 @@ class Network:
         "generated": self.generated_packets,
         "delivered": self.delivered_packets,
         "duplicates": self.duplicate_packets,
+        "false_positive_drops": self.false_positive_drops,
         "dropped": self.dropped_packets,
         "transmissions": self.transmission_count,
         "delivery_rate": delivery_rate,
